@@ -49,6 +49,7 @@ NS_ASSUME_NONNULL_BEGIN
     HUBCollectionViewLayout * const layout = (HUBCollectionViewLayout *)collectionView.collectionViewLayout;
 
     if (!usingBatchUpdates || diff == nil) {
+        NSLog(@"%s - %p (reloadData)", __FUNCTION__, (__bridge void *)collectionView);
         [collectionView reloadData];
         
         [layout computeForCollectionViewSize:collectionView.frame.size
@@ -72,7 +73,9 @@ NS_ASSUME_NONNULL_BEGIN
         completionBlock();
     } else {
         void (^updateBlock)() = ^{
+            NSLog(@"%s - %p (performBatchUpdates:completion:)", __FUNCTION__, (__bridge void *)collectionView);
             [collectionView performBatchUpdates:^{
+                NSLog(@"%s - %p INSIDE BLOCK (performBatchUpdates:completion:)", __FUNCTION__, (__bridge void *)collectionView);
                 [collectionView insertItemsAtIndexPaths:diff.insertedBodyComponentIndexPaths];
                 [collectionView deleteItemsAtIndexPaths:diff.deletedBodyComponentIndexPaths];
                 [collectionView reloadItemsAtIndexPaths:diff.reloadedBodyComponentIndexPaths];
@@ -81,8 +84,8 @@ NS_ASSUME_NONNULL_BEGIN
                                            viewModel:viewModel
                                                 diff:diff
                                      addHeaderMargin:addHeaderMargin];
-                
             } completion:^(BOOL finished) {
+                NSLog(@"%s - %p INSIDE COMPLETION (performBatchUpdates:completion:)", __FUNCTION__, (__bridge void *)collectionView);
                 self.lastRenderedViewModel = viewModel;
                 completionBlock();
             }];
