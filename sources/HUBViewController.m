@@ -462,7 +462,7 @@ NS_ASSUME_NONNULL_BEGIN
     
     HUBOperation * const updateViewModelOperation = [HUBOperation synchronousOperationWithBlock:^{
         HUBCopyNavigationItemProperties(self.navigationItem, viewModel.navigationItem);
-        printf("%s - Setting view model to %p %ld", __FUNCTION__, (__bridge void *)viewModel, viewModel.bodyComponentModels.count);
+        printf("%s - Setting view model to %p (%ld)", __FUNCTION__, (__bridge void *)viewModel, (long)viewModel.bodyComponentModels.count);
         self.viewModel = viewModel;
         self.viewModelHasChangedSinceLastLayoutUpdate = YES;
         printf("%s - setNeedsLayout...", __FUNCTION__);
@@ -709,13 +709,13 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
 {
     NSInteger count = self.viewModel.bodyComponentModels.count;
-    printf("%s - %p %ld", __FUNCTION__, (__bridge void *)self.viewModel, count);
+    printf("%s - %p (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, (long)count);
     return count;
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    printf("%s - %p (%ld) (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, indexPath.item, self.viewModel.bodyComponentModels.count);
+    printf("%s - %p (%ld) (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, (long)indexPath.item, (long)self.viewModel.bodyComponentModels.count);
 //    if (indexPath.item >= self.viewModel.bodyComponentModels.count) {
 //        NSString * const cellReuseIdentifier = @"DUMMY";
 //
@@ -918,7 +918,7 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
 
 - (HUBOperation *)createReloadCollectionViewOperation
 {
-    printf("%s - %p (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, self.viewModel.bodyComponentModels.count);
+    printf("%s - %p (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, (long)self.viewModel.bodyComponentModels.count);
     return [HUBOperation asynchronousOperationWithBlock:^(HUBOperationCompletionBlock completionHandler){
         if (!self.viewHasBeenLaidOut) {
             completionHandler();
@@ -941,7 +941,7 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
         id<HUBViewModel> const viewModel = self.viewModel;
         UICollectionView * const collectionView = self.collectionView;
         
-        printf("%s - RUNNING RENDER WITH %p (%ld)", __FUNCTION__, (__bridge void *)viewModel, viewModel.bodyComponentModels.count);
+        printf("%s - RUNNING RENDER WITH %p (%ld)", __FUNCTION__, (__bridge void *)viewModel, (long)viewModel.bodyComponentModels.count);
         [self.viewModelRenderer renderViewModel:viewModel
                                inCollectionView:collectionView
                               usingBatchUpdates:self.viewHasAppeared
