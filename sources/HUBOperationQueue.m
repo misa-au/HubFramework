@@ -58,7 +58,7 @@ NS_ASSUME_NONNULL_BEGIN
 {
     BOOL shouldPerformFirstOperation = (self.operations.count == 0);
     for (HUBOperation *operation in operations) {
-        NSLog(@"(%p) %s - adding operation %p", (__bridge void *)[NSThread currentThread], __FUNCTION__, (__bridge void *)operation);
+        printf("(%p) %s - adding operation %p", (__bridge void *)[NSThread currentThread], __FUNCTION__, (__bridge void *)operation);
     }
     [self.operations addObjectsFromArray:operations];
     
@@ -77,12 +77,12 @@ NS_ASSUME_NONNULL_BEGIN
         return;
     }
 
-    NSLog(@"(%p) %s - performing operation %p", (__bridge void *)[NSThread currentThread], __FUNCTION__, (__bridge void *)operation);
+    printf("(%p) %s - performing operation %p", (__bridge void *)[NSThread currentThread], __FUNCTION__, (__bridge void *)operation);
 
     __weak __typeof(self) weakSelf = self;
     
     [operation performWithCompletionHandler:^{
-        NSLog(@"(%p) %s - operation complete %p", (__bridge void *)[NSThread currentThread], __FUNCTION__, (__bridge void *)operation);
+        printf("(%p) %s - operation complete %p", (__bridge void *)[NSThread currentThread], __FUNCTION__, (__bridge void *)operation);
         HUBPerformOnMainQueue(^{
             __typeof(self) strongSelf = weakSelf;
             

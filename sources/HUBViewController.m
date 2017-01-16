@@ -236,7 +236,7 @@ NS_ASSUME_NONNULL_BEGIN
     if (self.viewModelHasChangedSinceLastLayoutUpdate || !CGRectEqualToRect(self.collectionView.frame, self.view.bounds)) {
         self.collectionView.frame = self.view.bounds;
         HUBOperation * const reloadOperation = [self createReloadCollectionViewOperation];
-        NSLog(@"%s - Adding 1 operation...", __FUNCTION__);
+        printf("%s - Adding 1 operation...", __FUNCTION__);
         [self.renderingOperationQueue addOperation:reloadOperation];
     }
 }
@@ -462,10 +462,10 @@ NS_ASSUME_NONNULL_BEGIN
     
     HUBOperation * const updateViewModelOperation = [HUBOperation synchronousOperationWithBlock:^{
         HUBCopyNavigationItemProperties(self.navigationItem, viewModel.navigationItem);
-        NSLog(@"%s - Setting view model to %p (%@)", __FUNCTION__, (__bridge void *)viewModel, @(viewModel.bodyComponentModels.count));
+        printf("%s - Setting view model to %p %ld", __FUNCTION__, (__bridge void *)viewModel, viewModel.bodyComponentModels.count);
         self.viewModel = viewModel;
         self.viewModelHasChangedSinceLastLayoutUpdate = YES;
-        NSLog(@"%s - setNeedsLayout...", __FUNCTION__);
+        printf("%s - setNeedsLayout...", __FUNCTION__);
         [self.view setNeedsLayout];
     }];
     
@@ -475,7 +475,7 @@ NS_ASSUME_NONNULL_BEGIN
         [self.delegate viewControllerDidUpdate:self];
     }];
 
-    NSLog(@"%s - Adding 4 operations...", __FUNCTION__);
+    printf("%s - Adding 4 operations...", __FUNCTION__);
     [self.renderingOperationQueue addOperations:@[
         willUpdateDelegateOperation,
         updateViewModelOperation,
@@ -709,13 +709,13 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section
 {
     NSInteger count = self.viewModel.bodyComponentModels.count;
-    NSLog(@"%s - %p (%@)", __FUNCTION__, (__bridge void *)self.viewModel, @(count));
+    printf("%s - %p %ld", __FUNCTION__, (__bridge void *)self.viewModel, count);
     return count;
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    NSLog(@"%s - %p (%@) (%@)", __FUNCTION__, (__bridge void *)self.viewModel, indexPath, @(self.viewModel.bodyComponentModels.count));
+    printf("%s - %p (%ld) (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, indexPath.item, self.viewModel.bodyComponentModels.count);
 //    if (indexPath.item >= self.viewModel.bodyComponentModels.count) {
 //        NSString * const cellReuseIdentifier = @"DUMMY";
 //
@@ -918,7 +918,7 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
 
 - (HUBOperation *)createReloadCollectionViewOperation
 {
-    NSLog(@"%s - %p (%@)", __FUNCTION__, (__bridge void *)self.viewModel, @(self.viewModel.bodyComponentModels.count));
+    printf("%s - %p (%ld)", __FUNCTION__, (__bridge void *)self.viewModel, self.viewModel.bodyComponentModels.count);
     return [HUBOperation asynchronousOperationWithBlock:^(HUBOperationCompletionBlock completionHandler){
         if (!self.viewHasBeenLaidOut) {
             completionHandler();
@@ -941,7 +941,7 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
         id<HUBViewModel> const viewModel = self.viewModel;
         UICollectionView * const collectionView = self.collectionView;
         
-        NSLog(@"%s - RUNNING RENDER WITH %p (%@)", __FUNCTION__, (__bridge void *)viewModel, @(viewModel.bodyComponentModels.count));
+        printf("%s - RUNNING RENDER WITH %p (%ld)", __FUNCTION__, (__bridge void *)viewModel, viewModel.bodyComponentModels.count);
         [self.viewModelRenderer renderViewModel:viewModel
                                inCollectionView:collectionView
                               usingBatchUpdates:self.viewHasAppeared
@@ -1465,7 +1465,7 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
     // If there's no animations, the UICollectionView will still not update its visible cells until having layouted.
     } else {
         [self setContentOffset:contentOffset animated:animated];
-        NSLog(@"%s - setNeedsLayout...", __FUNCTION__);
+        printf("%s - setNeedsLayout...", __FUNCTION__);
         [self.collectionView setNeedsLayout];
         [self.collectionView layoutIfNeeded];
         completion();
