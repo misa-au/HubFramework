@@ -19,29 +19,17 @@
  *  under the License.
  */
 
-#import "HUBOperation.h"
+#import "HUBAsynchronousBlockOperation.h"
 
-@interface HUBOperation ()
+@interface HUBAsynchronousBlockOperation ()
 
 @property (nonatomic, copy, readonly) HUBOperationAsynchronousBlock block;
 
 @end
 
-@implementation HUBOperation
-
-#pragma mark - Class constructors
-
-+ (HUBOperation *)synchronousOperationWithBlock:(HUBOperationSynchronousBlock)block
-{
-    return [[HUBOperation alloc] initWithBlock:^(HUBOperationCompletionBlock completionHandler) {
-        block();
-        completionHandler();
-    }];
-}
-
-+ (HUBOperation *)asynchronousOperationWithBlock:(HUBOperationAsynchronousBlock)block
-{
-    return [[HUBOperation alloc] initWithBlock:block];
+@implementation HUBAsynchronousBlockOperation {
+    BOOL _isExecuting;
+    BOOL _isFinished;
 }
 
 #pragma mark - Initializer
@@ -59,11 +47,50 @@
     return self;
 }
 
-#pragma mark - API
 
-- (void)performWithCompletionHandler:(HUBOperationCompletionBlock)completionHandler
+#pragma mark - NSOperation overrides
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdirect-ivar-access"
+- (BOOL)isFinished
 {
-    self.block(completionHandler);
+    return _isFinished;
+}
+
+- (void)setFinished:(BOOL)isFinished
+{
+    [self willChangeValueForKey:@"isFinished"];
+
+    _isFinished = isFinished;
+
+    [self didChangeValueForKey:@"isFinished"];
+}
+
+
+- (BOOL)isExecuting
+{
+    return _isExecuting;
+}
+
+
+- (void)setExecuting:(BOOL)isExecuting
+{
+    [self willChangeValueForKey:@"isExecuting"];
+
+    _isExecuting = isExecuting;
+
+    [self didChangeValueForKey:@"isExecuting"];
+}
+#pragma clang diagnostic pop
+
+- (void)start
+{
+    [self setExecuting:YES];
+
+    self.block(^{
+        [self setExecuting:NO];
+        [self setFinished:YES];
+    });
 }
 
 @end

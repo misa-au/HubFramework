@@ -21,37 +21,34 @@
 
 #import <Foundation/Foundation.h>
 
-@class HUBOperation;
+#import "HUBHeaderMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-/**
- *  An operation queue that keeps executing scheduled operations whenever the previous one finished
- *
- *  See the documentation for `HUBOperation` for a discussion why `NSOperation(Queue)` is not used here.
- */
-@interface HUBOperationQueue : NSObject
+/// Block type for completion handlers used with Hub Framework operations
+typedef void(^HUBOperationCompletionBlock)(void);
+
+/// Block type for asynchronous Hub Framework operations
+typedef void(^HUBOperationAsynchronousBlock)(HUBOperationCompletionBlock);
 
 /**
- *  Add an operation to the queue
+ *  An asynchronous block based `NSOperation`
  *
- *  @param operation The operation to add
- *
- *  If the queue is empty, the operation will start directly. Otherwise, it'll start whenever the queue
- *  became idle.
+ *  Provides an `NSOperation` that will call a block with a completion block. The provides block is responsible for
+ *  calling the operations completion block once the task has finished.
  */
-- (void)addOperation:(HUBOperation *)operation;
+@interface HUBAsynchronousBlockOperation : NSOperation
+
 
 /**
- *  Add an array of operations to the queue
+ *  Initializes the operation with an asynchronous block.
  *
- *  @param operations The operations to add
+ *  @param block The block that makes up the operation
  *
- *  All operations will be added to the queue before any of them are started. If the queue was empty when
- *  added, the first operation in the array will then start. Otherwise, it'll start whenever the queue
- *  became idle.
+ *  The operation constructed this way will call its completion handler once its block's completion handler
+ *  has been called.
  */
-- (void)addOperations:(NSArray<HUBOperation *> *)operations;
+- (instancetype)initWithBlock:(HUBOperationAsynchronousBlock)block HUB_DESIGNATED_INITIALIZER;
 
 @end
 

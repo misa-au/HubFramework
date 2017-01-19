@@ -40,11 +40,16 @@
 #import "HUBComponentModelBuilder.h"
 #import "HUBActionContext.h"
 
+@interface HUBViewController ()
+@property (nonatomic, strong) NSOperationQueue *renderQueue;
+@end
+
 @interface HUBViewControllerFactoryTests : XCTestCase
 
 @property (nonatomic, strong) HUBActionHandlerMock *defaultActionHandler;
 @property (nonatomic, strong) HUBContentReloadPolicyMock *defaultContentReloadPolicy;
 @property (nonatomic, strong) HUBManager *manager;
+@property (nonatomic, strong) NSOperationQueue *renderQueue;
 
 @end
 
@@ -58,7 +63,10 @@
     
     self.defaultActionHandler = [HUBActionHandlerMock new];
     self.defaultContentReloadPolicy = [HUBContentReloadPolicyMock new];
-    
+
+    self.renderQueue = [NSOperationQueue new];
+    self.renderQueue.maxConcurrentOperationCount = 1;
+
     id<HUBConnectivityStateResolver> const connectivityStateResolver = [HUBConnectivityStateResolverMock new];
     id<HUBComponentLayoutManager> const componentLayoutManager = [HUBComponentLayoutManagerMock new];
     HUBComponentDefaults * const componentDefaults = [HUBComponentDefaults defaultsForTesting];
@@ -132,8 +140,11 @@
                                                                                                 featureIdentifier:@"identifier"
                                                                                                      featureTitle:@"Title"];
     
+    viewController.renderQueue = self.renderQueue;
     [viewController viewWillAppear:NO];
-    
+
+    [self.renderQueue waitUntilAllOperationsAreFinished];
+
     XCTAssertTrue(contentOperationCalled);
     XCTAssertEqualObjects(viewController.featureIdentifier, @"identifier");
     XCTAssertEqualObjects(viewController.navigationItem.title, @"Title");
@@ -150,9 +161,12 @@
     
     HUBViewController * const viewController = [self.manager.viewControllerFactory createViewControllerWithContentOperations:@[contentOperation]
                                                                                                                 featureTitle:@"Feature"];
+    viewController.renderQueue = self.renderQueue;
     
     [viewController viewWillAppear:NO];
-    
+
+    [self.renderQueue waitUntilAllOperationsAreFinished];
+
     XCTAssertEqualObjects(viewController.featureIdentifier, @"feature");
     XCTAssertEqualObjects(viewController.navigationItem.title, @"Feature");
     XCTAssertEqual(viewController.viewModel.bodyComponentModels.count, 1u);
@@ -210,13 +224,17 @@
     };
     
     HUBViewController * const viewController = [self.manager.viewControllerFactory createViewControllerForViewURI:viewURI];
+
+    viewController.renderQueue = self.renderQueue;
     [viewController viewWillAppear:YES];
-    
+    [self.renderQueue waitUntilAllOperationsAreFinished];
+
     id<HUBComponentModel> const componentModel = viewController.viewModel.bodyComponentModels[0];
     NSDictionary<NSString *, id> *customData = @{@"custom":@"data"};
     
     [viewController selectComponentWithModel:componentModel customData:customData];
-    
+    [self.renderQueue waitUntilAllOperationsAreFinished];
+
     XCTAssertEqual(self.defaultActionHandler.contexts.count, 1u);
     XCTAssertEqualObjects(self.defaultActionHandler.contexts[0].componentModel, componentModel);
     XCTAssertEqualObjects(self.defaultActionHandler.contexts[0].customData, customData);

@@ -48,8 +48,7 @@
 #import "HUBActionHandlerWrapper.h"
 #import "HUBViewModelRenderer.h"
 #import "HUBFeatureInfo.h"
-#import "HUBOperation.h"
-#import "HUBOperationQueue.h"
+#import "HUBAsynchronousBlockOperation.h"
 
 static NSTimeInterval const HUBImageDownloadTimeThreshold = 0.07;
 
@@ -86,13 +85,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly) NSMutableDictionary<NSUUID *, HUBComponentWrapper *> *componentWrappersByCellIdentifier;
 @property (nonatomic, strong, readonly) NSMutableDictionary<NSString *, HUBComponentWrapper *> *componentWrappersByModelIdentifier;
 @property (nonatomic, strong, nullable) HUBComponentWrapper *highlightedComponentWrapper;
-@property (nonatomic, strong, readonly) HUBOperationQueue *renderingOperationQueue;
+@property (nonatomic, strong) NSOperationQueue *renderQueue;
 @property (nonatomic, strong, nullable) id<HUBViewModel> viewModel;
 @property (nonatomic, assign) BOOL viewHasAppeared;
 @property (nonatomic, assign) BOOL viewHasBeenLaidOut;
 @property (nonatomic) BOOL viewModelHasChangedSinceLastLayoutUpdate;
 @property (nonatomic) CGFloat visibleKeyboardHeight;
 @property (nonatomic, assign) CGPoint lastContentOffset;
+
 @property (nonatomic, copy, nullable) void(^pendingScrollAnimationCallback)(void);
 
 @end
@@ -148,8 +148,8 @@ NS_ASSUME_NONNULL_BEGIN
     _componentWrappersByIdentifier = [NSMutableDictionary new];
     _componentWrappersByCellIdentifier = [NSMutableDictionary new];
     _componentWrappersByModelIdentifier = [NSMutableDictionary new];
-    _renderingOperationQueue = [HUBOperationQueue new];
-    
+    _renderQueue = [self createRenderQueue];
+
     viewModelLoader.delegate = self;
     viewModelLoader.actionPerformer = self;
     imageLoader.delegate = self;
@@ -157,6 +157,16 @@ NS_ASSUME_NONNULL_BEGIN
     self.automaticallyAdjustsScrollViewInsets = [_scrollHandler shouldAutomaticallyAdjustContentInsetsInViewController:self];
     
     return self;
+}
+
+- (NSOperationQueue *)createRenderQueue
+{
+    NSOperationQueue * const renderQueue = [NSOperationQueue new];
+
+    renderQueue.maxConcurrentOperationCount = 1;
+    renderQueue.underlyingQueue = dispatch_get_main_queue();
+
+    return renderQueue;
 }
 
 - (void)dealloc
@@ -234,8 +244,8 @@ NS_ASSUME_NONNULL_BEGIN
     
     if (self.viewModelHasChangedSinceLastLayoutUpdate || !CGRectEqualToRect(self.collectionView.frame, self.view.bounds)) {
         self.collectionView.frame = self.view.bounds;
-        HUBOperation * const reloadOperation = [self createReloadCollectionViewOperation];
-        [self.renderingOperationQueue addOperation:reloadOperation];
+        NSOperation * const reloadOperation = [self createReloadCollectionViewOperation];
+        [self.renderQueue addOperation:reloadOperation];
     }
 }
 
@@ -454,29 +464,35 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)viewModelLoader:(id<HUBViewModelLoader>)viewModelLoader didLoadViewModel:(id<HUBViewModel>)viewModel
 {
-    HUBOperation * const willUpdateDelegateOperation = [HUBOperation synchronousOperationWithBlock:^{
+    NSOperation * const willUpdateDelegateOperation = [NSBlockOperation blockOperationWithBlock:^{
         [self.delegate viewController:self willUpdateWithViewModel:viewModel];
     }];
-    
-    HUBOperation * const updateViewModelOperation = [HUBOperation synchronousOperationWithBlock:^{
+
+    NSOperation * const updateViewModelOperation = [NSBlockOperation blockOperationWithBlock:^{
         HUBCopyNavigationItemProperties(self.navigationItem, viewModel.navigationItem);
         self.viewModel = viewModel;
         self.viewModelHasChangedSinceLastLayoutUpdate = YES;
         [self.view setNeedsLayout];
     }];
-    
-    HUBOperation * const reloadCollectionViewOperation = [self createReloadCollectionViewOperation];
-    
-    HUBOperation * const didUpdateDelegateOperation = [HUBOperation synchronousOperationWithBlock:^{
+
+    [updateViewModelOperation addDependency:willUpdateDelegateOperation];
+
+    NSOperation * const reloadCollectionViewOperation = [self createReloadCollectionViewOperation];
+
+    [reloadCollectionViewOperation addDependency:updateViewModelOperation];
+
+    NSOperation * const didUpdateDelegateOperation = [NSBlockOperation blockOperationWithBlock:^{
         [self.delegate viewControllerDidUpdate:self];
     }];
+
+    [didUpdateDelegateOperation addDependency:reloadCollectionViewOperation];
     
-    [self.renderingOperationQueue addOperations:@[
+    [self.renderQueue addOperations:@[
         willUpdateDelegateOperation,
         updateViewModelOperation,
         reloadCollectionViewOperation,
         didUpdateDelegateOperation
-    ]];
+    ] waitUntilFinished:NO];
 }
 
 - (void)viewModelLoader:(id<HUBViewModelLoader>)viewModelLoader didFailLoadingWithError:(NSError *)error
@@ -896,9 +912,9 @@ willUpdateSelectionState:(HUBComponentSelectionState)selectionState
 }
 
 
-- (HUBOperation *)createReloadCollectionViewOperation
+- (NSOperation *)createReloadCollectionViewOperation
 {
-    return [HUBOperation asynchronousOperationWithBlock:^(HUBOperationCompletionBlock completionHandler){
+    return [[HUBAsynchronousBlockOperation alloc] initWithBlock:^(HUBOperationCompletionBlock completionHandler){
         if (!self.viewHasBeenLaidOut) {
             completionHandler();
             return;
