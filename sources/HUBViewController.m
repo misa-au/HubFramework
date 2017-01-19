@@ -230,6 +230,7 @@ NS_ASSUME_NONNULL_BEGIN
     [notificationCenter removeObserver:self name:UIKeyboardWillHideNotification object:nil];
     
     self.viewHasBeenLaidOut = NO;
+    self.viewHasAppeared = NO;
 }
 
 - (void)viewDidLayoutSubviews
